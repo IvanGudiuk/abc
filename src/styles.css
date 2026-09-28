@@ -725,6 +725,14 @@ button:disabled {
     min-height: 360px;
     margin-bottom: 10px;
     border-radius: 12px;
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+
+  .tv-chart,
+  .tv-chart iframe {
+    touch-action: none;
+    overscroll-behavior: none;
   }
 
   .chart-timer {

@@ -64,6 +64,70 @@ function TradingViewChart({ interval = "5m" }) {
   }, []);
 
   useEffect(() => {
+    const chart = containerRef.current;
+
+    if (!chart) {
+      return undefined;
+    }
+
+    const isCompact = () => window.matchMedia(compactChartQuery).matches;
+
+    const hitChart = (event) => {
+      if (event.target instanceof Node && chart.contains(event.target)) {
+        return true;
+      }
+
+      const point = event.touches?.[0] || event.changedTouches?.[0];
+
+      if (!point) {
+        return false;
+      }
+
+      const hit = document.elementFromPoint(point.clientX, point.clientY);
+      return hit instanceof Node && chart.contains(hit);
+    };
+
+    const stopPageScroll = (event) => {
+      if (!isCompact() || !hitChart(event) || !event.cancelable) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    const pinIframe = (iframe) => {
+      if (iframe.dataset.touchPinned === "1") {
+        return;
+      }
+
+      iframe.dataset.touchPinned = "1";
+      iframe.style.touchAction = "none";
+      iframe.addEventListener("touchmove", stopPageScroll, { passive: false });
+    };
+
+    chart.querySelectorAll("iframe").forEach(pinIframe);
+
+    const observer = new MutationObserver(() => {
+      chart.querySelectorAll("iframe").forEach(pinIframe);
+    });
+
+    observer.observe(chart, { childList: true, subtree: true });
+
+    const listenerOptions = { capture: true, passive: false };
+    chart.addEventListener("touchmove", stopPageScroll, listenerOptions);
+    document.addEventListener("touchmove", stopPageScroll, listenerOptions);
+
+    return () => {
+      observer.disconnect();
+      chart.removeEventListener("touchmove", stopPageScroll, listenerOptions);
+      document.removeEventListener("touchmove", stopPageScroll, listenerOptions);
+      chart.querySelectorAll("iframe").forEach((iframe) => {
+        iframe.removeEventListener("touchmove", stopPageScroll);
+      });
+    };
+  }, []);
+
+  useEffect(() => {
     const container = containerRef.current;
     let cancelled = false;
 
