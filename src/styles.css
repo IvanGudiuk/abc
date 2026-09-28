@@ -872,10 +872,28 @@ button:disabled {
     margin-top: 10px;
   }
 
+  .side-tabs {
+    gap: 8px;
+  }
+
+  .side-tab,
   .custom-select-button,
   .custom-select-menu button {
-    padding: 4px 8px;
-    font-size: 12px;
+    padding: 10px 14px;
+    font-size: 15px;
+    min-height: 42px;
+  }
+
+  .side-tab {
+    flex: 1 1 0;
+  }
+
+  .custom-select-button {
+    justify-content: center;
+  }
+
+  .custom-select-caret {
+    font-size: 14px;
   }
 
   .positions-table-head,
