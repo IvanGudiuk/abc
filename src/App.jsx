@@ -50,6 +50,29 @@ const formatUsdDelta = (value) => {
   return "$0.00";
 };
 const formatCents = (value) => `${Math.round(Number(value || 0) * 100)}¢`;
+const LIVE_QUOTE_FIELDS = ["upBuy", "upSell", "downBuy", "downSell"];
+
+const sameDisplayedQuote = (left, right, field) =>
+  Math.round(Number(left?.[field] || 0) * 100) === Math.round(Number(right?.[field] || 0) * 100);
+
+const withStreamQuotes = (window, incoming, streamPrices) => {
+  const next = { ...window, ...incoming };
+  const streamed = streamPrices.get(next.slug);
+
+  if (!streamed) {
+    return next;
+  }
+
+  for (const field of LIVE_QUOTE_FIELDS) {
+    const value = Number(streamed[field]);
+
+    if (Number.isFinite(value) && value > 0) {
+      next[field] = value;
+    }
+  }
+
+  return next;
+};
 const formatShares = (value) => Number(value || 0).toFixed(4);
 const formatShareCount = (value) => {
   const numericValue = Number(value || 0);
@@ -212,6 +235,7 @@ function App() {
     priceToBeat: 0,
   });
   const streamRef = useRef(null);
+  const streamPricesRef = useRef(new Map());
   const orderTypeRef = useRef(null);
   const windowsLoadingRef = useRef(false);
   const tradeNoticeTimerRef = useRef(null);
@@ -284,7 +308,9 @@ function App() {
       const nextWindows = payload.windows || [];
       const nextIntervalMs = interval === "15m" ? 15 * 60 * 1000 : 5 * 60 * 1000;
       const liveStartMs = Math.floor(Date.now() / nextIntervalMs) * nextIntervalMs;
-      setWindows(nextWindows);
+      setWindows(
+        nextWindows.map((window) => withStreamQuotes(window, window, streamPricesRef.current)),
+      );
       setSelectedWindowStartMs((current) => {
         const liveWindow = nextWindows.find((window) => window.windowStartMs === liveStartMs);
         const selectedExpired = current != null && current < liveStartMs;
@@ -322,7 +348,7 @@ function App() {
     setWindows((current) =>
       current.map((window) =>
         window.windowStartMs === payload.window.windowStartMs
-          ? { ...window, ...payload.window }
+          ? withStreamQuotes(window, payload.window, streamPricesRef.current)
           : window,
       ),
     );
@@ -504,12 +530,21 @@ function App() {
                 return window;
               }
 
+              const quotes = {
+                upBuy: Number(live.upBuy || 0),
+                upSell: Number(live.upSell || 0),
+                downBuy: Number(live.downBuy || 0),
+                downSell: Number(live.downSell || 0),
+              };
+              streamPricesRef.current.set(window.slug, quotes);
+
+              if (LIVE_QUOTE_FIELDS.every((field) => sameDisplayedQuote(window, quotes, field))) {
+                return window;
+              }
+
               return {
                 ...window,
-                upBuy: live.upBuy,
-                upSell: live.upSell,
-                downBuy: live.downBuy,
-                downSell: live.downSell,
+                ...quotes,
               };
             }),
           );
@@ -605,6 +640,7 @@ function App() {
       setAuthenticated(false);
       setCodeRequested(false);
       setWindows([]);
+      streamPricesRef.current.clear();
       setAccounts([]);
       setMessage("");
       setBusy(false);
