@@ -276,7 +276,15 @@ function App() {
   const currentWindowStartMs = Math.floor(nowMs / intervalMs) * intervalMs;
   const isCurrentWindow = (windowItem) =>
     Number(windowItem?.windowStartMs) === currentWindowStartMs;
-  const accountPositions = selectedAccount?.positions || [];
+  const accountPositions = (selectedAccount?.positions || []).filter((position) => {
+    const slug = String(position.slug || position.eventSlug || "");
+
+    if (!slug.includes("-updown-")) {
+      return true;
+    }
+
+    return selectedInterval === "15m" ? slug.includes("-15m-") : slug.includes("-5m-");
+  });
   const windowPositions = accountPositions.filter((position) =>
     positionMatchesWindow(position, selectedWindow),
   );
