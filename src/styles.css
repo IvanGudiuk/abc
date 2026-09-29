@@ -788,6 +788,13 @@ button:disabled {
     text-align: center;
   }
 
+  .amount-tab,
+  .interval-tab {
+    padding: 12px 6px;
+    font-size: 14px;
+    min-height: 40px;
+  }
+
   .slot-tab .dot {
     width: 6px;
     height: 6px;
@@ -902,6 +909,14 @@ button:disabled {
   .positions-table-row {
     min-width: 560px;
     gap: 6px;
-    font-size: 11px;
+    font-size: 13px;
+  }
+
+  .position-sell {
+    font-size: 13px;
+  }
+
+  .position-cost {
+    font-size: 14px;
   }
 }
