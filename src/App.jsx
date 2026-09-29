@@ -5,6 +5,63 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, ""
 const WS_BASE_URL = (import.meta.env.VITE_WS_BASE_URL || "").replace(/\/$/, "");
 const LOGIN_EMAIL = "pr-zt@ukr.net";
 const AUTH_TOKEN_STORAGE_KEY = "polymarket_web_token";
+const INTERVAL_STORAGE_KEY = "polymarket_selected_interval";
+
+const normalizeStoredInterval = (value) => {
+  const raw = String(value || "").trim().toLowerCase();
+
+  if (raw === "15m" || raw === "15" || raw === "15min" || raw === "15 minute") {
+    return "15m";
+  }
+
+  if (raw === "5m" || raw === "5" || raw === "5min" || raw === "5 minute") {
+    return "5m";
+  }
+
+  return null;
+};
+
+const persistInterval = (interval) => {
+  const next = normalizeStoredInterval(interval) || "5m";
+
+  if (typeof window === "undefined") {
+    return next;
+  }
+
+  try {
+    window.localStorage.setItem(INTERVAL_STORAGE_KEY, next);
+  } catch (error) {
+    // Ignore storage quota / private-mode failures; URL still keeps the interval.
+  }
+
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("interval") !== next) {
+    url.searchParams.set("interval", next);
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  return next;
+};
+
+const getStoredInterval = () => {
+  if (typeof window === "undefined") {
+    return "5m";
+  }
+
+  const fromUrl = normalizeStoredInterval(
+    new URLSearchParams(window.location.search).get("interval"),
+  );
+
+  if (fromUrl) {
+    return fromUrl;
+  }
+
+  try {
+    return normalizeStoredInterval(window.localStorage.getItem(INTERVAL_STORAGE_KEY)) || "5m";
+  } catch (error) {
+    return "5m";
+  }
+};
 
 const QUICK_AMOUNTS = [1, 3, 5, 10, 20, 50, 100];
 const SELL_PERCENTS = [
@@ -220,7 +277,7 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [accounts, setAccounts] = useState([]);
   const [windows, setWindows] = useState([]);
-  const [selectedInterval, setSelectedInterval] = useState("5m");
+  const [selectedInterval, setSelectedInterval] = useState(() => getStoredInterval());
   const [selectedWindowStartMs, setSelectedWindowStartMs] = useState(null);
   const [tradeSide, setTradeSide] = useState("buy");
   const [outcome, setOutcome] = useState("up");
@@ -434,6 +491,14 @@ function App() {
       setMessage(error.message);
     });
   }, [authenticated, selectedInterval]);
+
+  const selectInterval = (interval) => {
+    setSelectedInterval(persistInterval(interval));
+  };
+
+  useEffect(() => {
+    persistInterval(selectedInterval);
+  }, [selectedInterval]);
 
   useEffect(() => {
     if (!authenticated || !selectedWindowStartMs) {
@@ -1173,13 +1238,13 @@ function App() {
           <div className="interval-tabs">
             <button
               className={selectedInterval === "5m" ? "interval-tab active" : "interval-tab"}
-              onClick={() => setSelectedInterval("5m")}
+              onClick={() => selectInterval("5m")}
             >
               5 minute
             </button>
             <button
               className={selectedInterval === "15m" ? "interval-tab active" : "interval-tab"}
-              onClick={() => setSelectedInterval("15m")}
+              onClick={() => selectInterval("15m")}
             >
               15 minute
             </button>
